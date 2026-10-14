@@ -24,3 +24,4 @@ AAA-Game/Library/
 # OS / editor
 .DS_Store
 *~
+AAA-Game/mono_crash*
