@@ -37,7 +37,7 @@ public static class SliceBootstrap
     }
 
     // attach a Blender-made FBX model as the visible skin of a primitive host
-    static void AttachModel(GameObject host, string fbxPath, float scale, float yOffset = 0f, Color glow = default)
+    static void AttachModel(GameObject host, string fbxPath, float scale, float yOffset = 0f, Color glow = default, bool floater = false, float walkIntensity = 1f)
     {
         var model = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
         if (model == null) return;
@@ -62,6 +62,8 @@ public static class SliceBootstrap
         }
         var r = host.GetComponent<Renderer>();
         if (r != null) r.enabled = false;
+        var walker = inst.AddComponent<ProceduralWalker>();
+        walker.Floater = floater; walker.Intensity = walkIntensity;
     }
 
     [MenuItem("Slice/Build Vertical Slice")]
@@ -69,10 +71,10 @@ public static class SliceBootstrap
     {
         // ---- materials
         AssetDatabase.DeleteAsset("Assets/Materials"); AssetDatabase.CreateFolder("Assets", "Materials");
-        var mFloor   = Mat("Floor",   new Color(0.14f, 0.16f, 0.26f), new Color(0.02f, 0.03f, 0.06f), 0.15f, 0.55f);
-        var mFloorIn = Mat("FloorIn", new Color(0.10f, 0.12f, 0.22f), new Color(0.05f, 0.35f, 0.55f) * 0.8f);
-        var mWall    = Mat("Wall",    new Color(0.17f, 0.19f, 0.30f), new Color(0.04f, 0.09f, 0.20f), 0.2f, 0.5f);
-        var mTrim    = Mat("WallTrim",new Color(0.04f, 0.05f, 0.09f), new Color(0.1f, 0.9f, 1f) * 1.1f);
+        var mFloor   = Mat("Floor",   new Color(0.58f, 0.52f, 0.46f), new Color(0.03f, 0.02f, 0.012f), 0.08f, 0.4f);
+        var mFloorIn = Mat("FloorIn", new Color(0.30f, 0.24f, 0.18f), new Color(0.9f, 0.45f, 0.12f) * 0.6f);
+        var mWall    = Mat("Wall",    new Color(0.55f, 0.52f, 0.46f), new Color(0.02f, 0.018f, 0.012f), 0.08f, 0.45f);
+        var mTrim    = Mat("WallTrim",new Color(0.11f, 0.09f, 0.06f), new Color(1f, 0.55f, 0.15f) * 0.9f);
         var mBarrier = Mat("Barrier", new Color(0.2f, 0.02f, 0.08f),  new Color(1f, 0.2f, 0.5f) * 2f);
         var mPlayer  = Mat("Player",  new Color(0.08f, 0.3f, 0.36f),  new Color(0.1f, 0.95f, 1f) * 1.8f);
         var mGun     = Mat("Gun",     new Color(0.08f, 0.08f, 0.12f), new Color(1f, 0.8f, 0.2f) * 1.5f);
@@ -82,12 +84,12 @@ public static class SliceBootstrap
         var mBullet  = Mat("Bullet",  new Color(0.3f, 0.25f, 0.05f),  new Color(1f, 0.9f, 0.25f) * 4f);
         var mEBullet = Mat("EBullet", new Color(0.3f, 0.05f, 0.08f),  new Color(1f, 0.15f, 0.3f) * 4f);
         var mGem     = Mat("Gem",     new Color(0.05f, 0.25f, 0.12f), new Color(0.2f, 1f, 0.5f) * 4f);
-        var mPillar  = Mat("Pillar",  new Color(0.18f, 0.18f, 0.28f), new Color(0.15f, 0.35f, 0.9f) * 0.7f, 0.2f, 0.6f);
-        var mCrystal = Mat("Crystal", new Color(0.15f, 0.05f, 0.25f), new Color(0.7f, 0.3f, 1f) * 3f);
+        var mPillar  = Mat("Pillar",  new Color(0.5f, 0.48f, 0.44f), new Color(0.45f, 0.25f, 0.08f) * 0.5f, 0.12f, 0.5f);
+        var mCrystal = Mat("Crystal", new Color(0.2f, 0.12f, 0.04f), new Color(1f, 0.6f, 0.12f) * 2.5f);
         var mEye     = Mat("Eye",     Color.white, Color.white * 4f);
         var mSconce  = Mat("Sconce",  new Color(0.3f, 0.15f, 0.05f),  new Color(1f, 0.55f, 0.15f) * 3f);
-        var mDebris  = Mat("Debris",  new Color(0.10f, 0.10f, 0.15f), Color.black, 0.3f, 0.4f);
-        var mBanner  = Mat("Banner",  new Color(0.18f, 0.05f, 0.10f), new Color(0.9f, 0.15f, 0.35f) * 0.9f);
+        var mDebris  = Mat("Debris",  new Color(0.22f, 0.20f, 0.17f), Color.black, 0.3f, 0.4f);
+        var mBanner  = Mat("Banner",  new Color(0.30f, 0.04f, 0.05f), new Color(0.55f, 0.06f, 0.08f) * 0.5f);
 
         // procedural textures
         var tFloor = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Textures/floor.png");
@@ -99,9 +101,9 @@ public static class SliceBootstrap
         // ---- scene
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(0.22f, 0.26f, 0.36f);
+        RenderSettings.ambientLight = new Color(0.19f, 0.155f, 0.12f);
         RenderSettings.fog = true;
-        RenderSettings.fogColor = new Color(0.04f, 0.06f, 0.12f);
+        RenderSettings.fogColor = new Color(0.05f, 0.035f, 0.02f);
         RenderSettings.fogMode = FogMode.Exponential;
         RenderSettings.fogDensity = 0.005f;
 
@@ -222,7 +224,8 @@ public static class SliceBootstrap
                 sc.transform.rotation = Quaternion.Euler(0, 45, 0);
                 var sgo = new GameObject("sconcelight"); sgo.transform.SetParent(rr, false);
                 var sl = sgo.AddComponent<Light>();
-                sl.type = LightType.Point; sl.range = 5f; sl.intensity = 0.9f; sl.color = new Color(1f, 0.55f, 0.2f);
+                sl.type = LightType.Point; sl.range = 5.5f; sl.intensity = 1.2f; sl.color = new Color(1f, 0.55f, 0.2f);
+                sgo.AddComponent<FlickerLight>();
                 sgo.transform.position = sp + new Vector3(-ex * 0.7f, 0.25f, -ez * 0.7f);
             }
             // banners on the long walls
@@ -254,7 +257,8 @@ public static class SliceBootstrap
                         bgo.transform.position = new Vector3(cp.x, 0, cp.y);
                         var bgo2 = new GameObject("brazierlight"); bgo2.transform.SetParent(rr, false);
                         var bl = bgo2.AddComponent<Light>();
-                        bl.type = LightType.Point; bl.range = 6f; bl.intensity = 1.1f; bl.color = new Color(1f, 0.5f, 0.15f);
+                        bl.type = LightType.Point; bl.range = 6f; bl.intensity = 1.3f; bl.color = new Color(1f, 0.5f, 0.15f);
+                        bgo2.AddComponent<FlickerLight>();
                         bgo2.transform.position = new Vector3(cp.x, 2.2f, cp.y);
                     }
                 }
@@ -263,14 +267,14 @@ public static class SliceBootstrap
             // room light
             var lt = new GameObject("light" + idx).transform; lt.SetParent(rr, false);
             var l = lt.gameObject.AddComponent<Light>();
-            l.type = LightType.Point; l.range = Mathf.Max(w, d) * 1.1f; l.intensity = 2.6f;
-            l.color = boss ? new Color(1f, 0.3f, 0.25f) : idx % 2 == 0 ? new Color(0.3f, 0.65f, 1f) : new Color(0.85f, 0.4f, 1f);
+            l.type = LightType.Point; l.range = Mathf.Max(w, d) * 1.1f; l.intensity = 3.1f;
+            l.color = boss ? new Color(1f, 0.3f, 0.22f) : new Color(1f, 0.62f, 0.3f);
             lt.position = new Vector3(cx, 4.2f, cz);
             // second dim fill light low over the floor
             var lt2 = new GameObject("fill" + idx).transform; lt2.SetParent(rr, false);
             var l2 = lt2.gameObject.AddComponent<Light>();
-            l2.type = LightType.Point; l2.range = Mathf.Max(w, d) * 0.8f; l2.intensity = 0.9f;
-            l2.color = new Color(0.5f, 0.6f, 0.9f);
+            l2.type = LightType.Point; l2.range = Mathf.Max(w, d) * 0.8f; l2.intensity = 0.7f;
+            l2.color = new Color(0.95f, 0.55f, 0.25f);
             lt2.position = new Vector3(cx - w / 4f, 2.5f, cz);
 
             // spawn points
@@ -321,7 +325,7 @@ public static class SliceBootstrap
         var gemPrefab = PrefabUtility.SaveAsPrefabAsset(gem, prefabDir + "/Gem.prefab");
         Object.DestroyImmediate(gem);
 
-        GameObject MakeEnemy(string name, Material m, Vector3 scale, float hp, float speed, float contactDmg, int xp, string fbx = null, float fbxScale = 1f, Color fbxGlow = default)
+        GameObject MakeEnemy(string name, Material m, Vector3 scale, float hp, float speed, float contactDmg, int xp, string fbx = null, float fbxScale = 1f, Color fbxGlow = default, bool floater = false, float walkIntensity = 1f)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             go.transform.localScale = scale;
@@ -339,7 +343,7 @@ public static class SliceBootstrap
             Object.DestroyImmediate(go.GetComponent<Collider>());
             if (fbx != null)
             {
-                AttachModel(go, fbx, fbxScale, 0f, fbxGlow);
+                AttachModel(go, fbx, fbxScale, 0f, fbxGlow, floater, walkIntensity);
                 // hide primitive eye placeholders too when a real skin exists
                 e1.GetComponent<Renderer>().enabled = false;
                 e2.GetComponent<Renderer>().enabled = false;
@@ -357,10 +361,10 @@ public static class SliceBootstrap
             return p;
         }
         var chaserPrefab = MakeEnemy("Chaser", mChaser, new Vector3(0.8f, 0.9f, 0.8f), 40f, 5f, 12f, 2, "Assets/Models/Chaser.fbx", 1.0f, new Color(0.9f, 0.1f, 0.5f) * 0.8f);
-        var spitterPrefab = MakeEnemy("Spitter", mSpitter, new Vector3(0.9f, 1.1f, 0.9f), 60f, 3.4f, 8f, 3, "Assets/Models/Spitter.fbx", 1.1f, new Color(1f, 0.5f, 0.1f) * 0.8f);
+        var spitterPrefab = MakeEnemy("Spitter", mSpitter, new Vector3(0.9f, 1.1f, 0.9f), 60f, 3.4f, 8f, 3, "Assets/Models/Spitter.fbx", 1.1f, new Color(0.4f, 0.9f, 0.7f) * 0.7f, floater: true);
         spitterPrefab.GetComponent<Enemy>().KeepDistance = 8f;
         PrefabUtility.SavePrefabAsset(spitterPrefab);
-        var bossPrefab = MakeEnemy("Boss", mBoss, new Vector3(2.2f, 2.4f, 2.2f), 700f, 3.2f, 22f, 30, "Assets/Models/Warden.fbx", 1.15f, new Color(1f, 0.12f, 0.12f) * 1.1f);
+        var bossPrefab = MakeEnemy("Boss", mBoss, new Vector3(2.2f, 2.4f, 2.2f), 700f, 3.2f, 22f, 30, "Assets/Models/Warden.fbx", 1.15f, new Color(1f, 0.12f, 0.12f) * 0.9f, walkIntensity: 0.7f);
         var bossE = bossPrefab.GetComponent<Enemy>();
         bossE.ShootRange = 16f; bossE.FireInterval = 2.4f; bossE.ProjectileDamage = 14f;
         PrefabUtility.SavePrefabAsset(bossPrefab);
@@ -428,14 +432,14 @@ public static class SliceBootstrap
         var pc = player.AddComponent<PlayerController>();
         pc.Weapon = wpn;
         var pilot = player.AddComponent<AutoPilot>(); pilot.Enabled = false;
-        AttachModel(player, "Assets/Models/HeroKnight.fbx", 0.9f, 0f, new Color(0.15f, 0.7f, 0.9f) * 0.9f);
+        AttachModel(player, "Assets/Models/HeroKnight.fbx", 0.9f, 0f, new Color(1f, 0.72f, 0.32f) * 0.35f);
 
         // ---- camera + post
         var camGo = new GameObject("Main Camera");
         camGo.tag = "MainCamera";
         var cam = camGo.AddComponent<Camera>();
         cam.fieldOfView = 50f; cam.nearClipPlane = 0.3f; cam.farClipPlane = 200f;
-        cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = new Color(0.03f, 0.045f, 0.09f);
+        cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = new Color(0.035f, 0.028f, 0.022f);
         var cf = camGo.AddComponent<CamFollow>();
         cf.Target = player.transform;
         camGo.transform.position = player.transform.position + cf.Offset;
